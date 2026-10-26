@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nano Banana Pro Studio - Free AI Image Generator</title>
+    <!-- Tailwind CSS v3 via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        banana: {
+                            50: '#fefce8',
+                            100: '#fef9c3',
+                            200: '#fef08a',
+                            300: '#fde047',
+                            400: '#facc15',
+                            500: '#eab308',
+                            600: '#ca8a04',
+                            700: '#a16207',
+                            800: '#854d0e',
+                            900: '#713f12',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Puter.js for zero-auth unmetered image generation -->
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        /* Custom scrollbar & smooth interactions */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        .shimmer {
+            background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 100%);
+            background-size: 200% 100%;
+            animation: shimmer 1.8s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+    </style>
+</head>
+<body class="min-h-full flex flex-col font-sans antialiased bg-slate-950 text-slate-100 selection:bg-banana-500 selection:text-slate-950">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-banana-500 to-amber-300 flex items-center justify-center text-slate-950 shadow-md shadow-banana-500/20 ring-1 ring-banana-400/30">
+                    <span class="text-xl">🍌</span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-base font-bold tracking-tight text-slate-100">Nano Banana Pro</h1>
+                        <span class="px-2 py-0.5 text-[11px] font-semibold tracking-wider uppercase rounded-full bg-banana-500/10 text-banana-400 ring-1 ring-banana-500/30">9router AI</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-none">AI Image Generator • 9router Gateway • ag/gemini-3.1-flash-image</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Sẵn sàng hoạt động
+                </span>
+                <button id="btnOpenHistory" class="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 ring-1 ring-slate-800 transition min-w-[44px] min-h-[44px] flex items-center justify-center" title="Lịch sử tạo ảnh">
+                    <i data-lucide="history" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        <!-- Left Column: Controls & Configuration (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col gap-5">
+            <div class="bg-slate-900/90 rounded-2xl p-5 ring-1 ring-slate-800 shadow-xl shadow-slate-950/50 backdrop-blur-sm space-y-5">
+                
+                <!-- 9router Gateway Section (Động cơ duy nhất) -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between pb-1 border-b border-slate-800/80">
+                        <div>
+                            <span class="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-1.5">
+                                <i data-lucide="network" class="w-4 h-4 text-banana-400"></i>
+                                Động cơ: 9router Gateway
+                            </span>
+                            <p class="text-[11px] text-slate-400 mt-0.5">Model: <span class="font-mono text-banana-400 font-semibold">ag/gemini-3.1-flash-image</span></p>
+                        </div>
+                        <span id="router9StatusBadge" class="text-[10px] font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/30 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            Online (localhost:20128)
+                        </span>
+                    </div>
+
+                    <!-- Hidden input to maintain JS DOM compatibility -->
+                    <input type="hidden" id="engineSelect" value="9router">
+
+                    <!-- Model Selector (Chỉ 9router) -->
+                    <div id="geminiModelContainer" class="p-3 bg-slate-950 rounded-xl ring-1 ring-slate-800 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label for="geminiModelSelect" class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="cpu" class="w-3.5 h-3.5 text-banana-400"></i>
+                                Model 9router:
+                            </label>
+                            <span class="text-[10px] text-banana-400 font-mono bg-banana-500/10 px-2 py-0.5 rounded-full ring-1 ring-banana-500/30">Gemini 3.1</span>
+                        </div>
+                        <select id="geminiModelSelect" class="w-full bg-slate-900 text-slate-200 rounded-lg px-3 py-2 text-xs font-mono ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none min-h-[38px]">
+                            <option value="ag/gemini-3.1-flash-image" selected>ag/gemini-3.1-flash-image (Gemini 3.1 Flash Image)</option>
+                            <option value="custom">⚙️ Tùy chỉnh (Nhập mã model 9router khác...)</option>
+                        </select>
+                        
+                        <!-- Custom Model Input (shown when 'custom' selected) -->
+                        <div id="customModelInputContainer" class="hidden pt-1 space-y-1">
+                            <input type="text" id="customModelInput" placeholder="VD: ag/gemini-3.1-flash-image" class="w-full bg-slate-900 text-slate-200 rounded-lg px-3 py-2 text-xs font-mono ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none">
+                            <p class="text-[10px] text-slate-500">Nhập chính xác ID model do 9router cung cấp.</p>
+                        </div>
+                    </div>
+
+                    <!-- 9router Gateway Configuration Box -->
+                    <div id="router9Container" class="p-3.5 bg-slate-950 rounded-xl ring-1 ring-slate-800 space-y-3">
+                        <!-- Endpoint -->
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label for="router9Endpoint" class="text-[11px] font-medium text-slate-400">Endpoint API:</label>
+                                <span class="text-[10px] text-slate-500 font-mono">POST /v1/images/generations</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <input type="text" id="router9Endpoint" value="http://localhost:20128/v1/images/generations" class="w-full bg-slate-900 text-slate-200 rounded-lg px-3 py-2 text-xs font-mono ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none min-h-[38px]">
+                                <button type="button" id="btnTest9Router" class="px-3 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg ring-1 ring-slate-700 transition flex items-center gap-1 min-h-[38px] whitespace-nowrap active:scale-95" title="Kiểm tra kết nối">
+                                    <i data-lucide="activity" class="w-3.5 h-3.5 text-banana-400"></i>
+                                    Test
+                                </button>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1 flex items-center gap-1.5">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-banana-400"></i>
+                                <span>Tự động chuyển tiếp qua Local Relay để vượt rào cản CORS. Ảnh được sinh 100% trên VPS.</span>
+                            </p>
+                        </div>
+
+                        <!-- API Key -->
+                        <div>
+                            <label for="router9ApiKey" class="block text-[11px] font-medium text-slate-400 mb-1">API Key 9router:</label>
+                            <div class="relative">
+                                <input type="password" id="router9ApiKey" value="sk-8302f280f7e87de7-imm5ms-c42031a6" placeholder="sk-..." class="w-full bg-slate-900 text-slate-200 rounded-lg pl-3 pr-20 py-2 text-xs font-mono ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none min-h-[38px]">
+                                <div class="absolute right-1.5 top-1.5 flex items-center gap-1">
+                                    <button type="button" id="btnToggle9RouterKey" class="p-1 text-slate-400 hover:text-slate-200 rounded" title="Hiện/Ẩn">
+                                        <i data-lucide="eye" class="w-4 h-4"></i>
+                                    </button>
+                                    <button type="button" id="btnPaste9RouterKey" class="p-1 text-slate-400 hover:text-banana-400 rounded" title="Dán từ Clipboard">
+                                        <i data-lucide="clipboard" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Model Options (Quality, Extend) -->
+                        <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-900 text-[11px]">
+                            <div>
+                                <label for="router9Quality" class="block text-slate-400 mb-1">Chất lượng (Quality):</label>
+                                <select id="router9Quality" class="w-full bg-slate-900 text-slate-200 rounded-lg px-2 py-1.5 text-xs font-medium ring-1 ring-slate-800 focus:ring-1 focus:ring-banana-500 focus:outline-none min-h-[34px]">
+                                    <option value="auto" selected>Tự động (Auto)</option>
+                                    <option value="high">Cao (High)</option>
+                                    <option value="standard">Tiêu chuẩn</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="router9PromptExtend" class="block text-slate-400 mb-1">Prompt Extend:</label>
+                                <select id="router9PromptExtend" class="w-full bg-slate-900 text-slate-200 rounded-lg px-2 py-1.5 text-xs font-medium ring-1 ring-slate-800 focus:ring-1 focus:ring-banana-500 focus:outline-none min-h-[34px]">
+                                    <option value="true" selected>Bật (Mặc định)</option>
+                                    <option value="false">Tắt (Nguyên bản)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Studio Mode Switcher Tabs -->
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Chế độ Studio (Studio Mode)</label>
+                    <div class="grid grid-cols-2 gap-1.5 p-1 bg-slate-950 rounded-xl ring-1 ring-slate-800">
+                        <button type="button" id="tabModeStandard" onclick="window.switchStudioMode && window.switchStudioMode('standard')" class="py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition bg-banana-500/10 text-banana-400 ring-1 ring-banana-500/30 shadow-sm min-h-[40px] cursor-pointer">
+                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                            <span>1. Sáng tạo tự do</span>
+                        </button>
+                        <button type="button" id="tabModeImageTool" onclick="window.switchStudioMode && window.switchStudioMode('imagetool')" class="py-2.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-transparent hover:ring-slate-800 min-h-[40px] cursor-pointer">
+                            <i data-lucide="layers" class="w-4 h-4 text-banana-400"></i>
+                            <span>2. ImageTool Pro</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-banana-500/20 text-banana-300 font-mono">Flow R2I</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mode 1: Standard Studio Container -->
+                <div id="standardStudioContainer" class="space-y-4">
+                    <!-- Input 1: Text Prompt -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label for="promptInput" class="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                                1. Mô tả bức ảnh (Prompt Text)
+                            </label>
+                            <button id="btnRandomPrompt" class="inline-flex items-center gap-1 text-xs text-banana-400 hover:text-banana-300 transition font-medium min-h-[28px] px-2 py-0.5 rounded-md hover:bg-banana-500/10">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                Gợi ý mẫu
+                            </button>
+                        </div>
+                        <textarea id="promptInput" rows="3" placeholder="Nhập mô tả bức ảnh bạn muốn tạo (VD: Chú mèo phi hành gia khám phá sao Hỏa, phong cách điện ảnh 8K, ánh sáng kịch tính)..." class="w-full bg-slate-950 text-slate-100 placeholder-slate-500 rounded-xl p-3.5 text-sm ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none transition resize-none"></textarea>
+                        
+                        <div class="mt-1.5 flex items-center justify-between text-[11px]">
+                            <span class="inline-flex items-center gap-1.5 text-banana-400 font-medium">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                Đã kích hoạt AI dịch & tối ưu văn hóa Tiếng Việt 100%
+                            </span>
+                        </div>
+
+                        <!-- Style Presets Quick Pills -->
+                        <div class="mt-2.5">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                    <i data-lucide="palette" class="w-3.5 h-3.5 text-banana-400"></i>
+                                    Phong cách nghệ thuật:
+                                </span>
+                                <span class="text-[10px] text-slate-400 font-mono" id="activeStyleLabel">Tự do</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5" id="stylePills">
+                                <button type="button" data-style="" data-name="Tự do" class="style-pill active px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-200 ring-1 ring-slate-700 hover:text-slate-100 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>✨ Tự do</span>
+                                </button>
+                                <button type="button" data-style=", 8k photorealistic photography, highly detailed, realistic natural textures, sharp focus, professional lighting" data-name="Chân thực" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>📸 Chân thực</span>
+                                </button>
+                                <button type="button" data-style=", beautiful anime visual novel style, Makoto Shinkai and Studio Ghibli aesthetic, vibrant emotional lighting, clean lineart, masterwork illustration" data-name="Anime" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>🎨 Anime</span>
+                                </button>
+                                <button type="button" data-style=", dreamy ethereal fantasy, soft glowing pastel colors, magical twilight aura, celestial light rays, fairytale atmosphere, soft focus, enchanting magical realism" data-name="Mộng mơ" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>☁️ Mộng mơ</span>
+                                </button>
+                                <button type="button" data-style=", cinematic blockbuster movie still, 70mm IMAX film, anamorphic lens flare, dramatic contrast, warm color grading, shallow depth of field, photorealistic cinematography" data-name="Điện ảnh" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>🎬 Điện ảnh</span>
+                                </button>
+                                <button type="button" data-style=", 3D cute Pixar Disney character animation render, soft ambient occlusion, subsurface scattering, octane render, vivid warm lighting, 4k" data-name="3D Pixar" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>🧸 3D Pixar</span>
+                                </button>
+                                <button type="button" data-style=", classical oil painting on canvas, expressive thick brush strokes, rich impasto texture, Rembrandt chiaroscuro lighting, museum fine art masterpiece" data-name="Sơn dầu" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>🖌️ Sơn dầu</span>
+                                </button>
+                                <button type="button" data-style=", traditional East Asian ink wash watercolor painting, sumi-e style, atmospheric brushwork, flowing water ink splashes on antique rice paper, zen poetic minimalism" data-name="Thủy mặc" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>🏮 Thủy mặc</span>
+                                </button>
+                                <button type="button" data-style=", cyberpunk neon city at midnight, glowing holographic billboards, synthwave purple and cyan glow, reflective wet asphalt, hyper-detailed octane render" data-name="Cyberpunk" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>⚡ Cyberpunk</span>
+                                </button>
+                                <button type="button" data-style=", vintage 1980s retro film photography, authentic 35mm grain, Kodak Portra 400 color science, nostalgic warm tones, subtle lens flare" data-name="Vintage" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>🎞️ Vintage</span>
+                                </button>
+                                <button type="button" data-style=", delicate watercolor illustration, soft color bleeding, textured cold-press paper, elegant gentle strokes, artistic book illustration" data-name="Màu nước" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>💧 Màu nước</span>
+                                </button>
+                                <button type="button" data-style=", detailed pencil sketch, charcoal shading, cross-hatching texture, artistic hand-drawn concept art on parchment" data-name="Phác thảo" class="style-pill px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-950 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 hover:ring-slate-700 transition flex items-center gap-1 min-h-[34px]">
+                                    <span>✏️ Phác thảo</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input 2: Image Input (Image-to-Image / Reference) -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                                2. Ảnh tham chiếu (Image Input - Tùy chọn)
+                            </label>
+                            <span class="text-[11px] text-slate-400">Image-to-Image / Edit</span>
+                        </div>
+
+                        <!-- Dropzone -->
+                        <div id="dropZone" class="relative group border-2 border-dashed border-slate-800 hover:border-banana-500/50 rounded-xl p-4 transition text-center cursor-pointer bg-slate-950/50 hover:bg-slate-950">
+                            <input type="file" id="imageInput" accept="image/png, image/jpeg, image/webp" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                            
+                            <div id="dropZoneEmpty" class="flex flex-col items-center justify-center py-2">
+                                <div class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-slate-400 group-hover:text-banana-400 transition mb-2">
+                                    <i data-lucide="image-plus" class="w-5 h-5"></i>
+                                </div>
+                                <p class="text-xs font-medium text-slate-300">Kéo thả ảnh hoặc <span class="text-banana-400 underline">bấm để chọn ảnh</span></p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">Hỗ trợ PNG, JPG, WEBP (Tối đa 10MB)</p>
+                            </div>
+
+                            <!-- Preview Container -->
+                            <div id="imagePreviewContainer" class="hidden flex items-center gap-3 text-left">
+                                <img id="imagePreview" src="" alt="Preview" class="w-16 h-16 object-cover rounded-lg ring-1 ring-slate-700">
+                                <div class="flex-1 min-w-0">
+                                    <p id="imageFileName" class="text-xs font-medium text-slate-200 truncate"></p>
+                                    <p id="imageFileSize" class="text-[11px] text-slate-400 font-mono"></p>
+                                    <span class="inline-flex items-center gap-1 text-[11px] text-emerald-400 mt-1">
+                                        <i data-lucide="check-circle" class="w-3 h-3"></i> Đã nạp ảnh tham chiếu
+                                    </span>
+                                </div>
+                                <button type="button" id="btnRemoveImage" class="p-2 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-900 transition relative z-20 min-w-[36px] min-h-[36px] flex items-center justify-center" title="Xóa ảnh này">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode 2: ImageTool Pro Container (Google Flow Reference-to-Image & Identity Lock) -->
+                <div id="imageToolStudioContainer" class="space-y-4 hidden">
+                    
+                    <!-- Subject Architecture Selection -->
+                    <div class="p-3 bg-slate-950 rounded-xl ring-1 ring-slate-800 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="users" class="w-3.5 h-3.5 text-banana-400"></i>
+                                Chủ thể (Subject Architecture)
+                            </label>
+                            <span class="text-[10px] text-slate-400 font-mono" id="activeSubjectLabel">Cặp đôi Nam Nữ</span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5" id="subjectModeGroup">
+                            <button type="button" data-subject="couple" class="subject-btn active py-2 px-2 rounded-lg text-xs font-medium bg-banana-500/10 text-banana-400 ring-1 ring-banana-500/40 transition flex items-center justify-center gap-1 min-h-[38px]">
+                                <span>💑 Cặp đôi</span>
+                            </button>
+                            <button type="button" data-subject="male" class="subject-btn py-2 px-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 transition flex items-center justify-center gap-1 min-h-[38px]">
+                                <span>👨 Nam</span>
+                            </button>
+                            <button type="button" data-subject="female" class="subject-btn py-2 px-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 transition flex items-center justify-center gap-1 min-h-[38px]">
+                                <span>👩 Nữ</span>
+                            </button>
+                            <button type="button" data-subject="scene" class="subject-btn py-2 px-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 hover:text-slate-200 ring-1 ring-slate-800 transition flex items-center justify-center gap-1 min-h-[38px]">
+                                <span>🏞️ Bối cảnh</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Ethnicity & Identity Origin -->
+                    <div class="p-3 bg-slate-950 rounded-xl ring-1 ring-slate-800 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="user-check" class="w-3.5 h-3.5 text-banana-400"></i>
+                                Nhân dạng &amp; Nét mặt (Identity Origin)
+                            </label>
+                            <span class="text-[10px] text-banana-400 font-mono">Khóa sắc tộc</span>
+                        </div>
+                        <select id="itEthnicitySelect" class="w-full bg-slate-900 text-slate-200 rounded-lg px-3 py-2 text-xs font-medium ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none min-h-[38px]">
+                            <option value="vietnamese" selected>🇻🇳 Việt Nam / Đông Á (Asian) • Mắt đen, tóc đen, nét mặt thuần Á Đông</option>
+                            <option value="korean">🌸 Hàn Quốc (K-Style) • Nét thanh xuân, da trắng, tóc layer</option>
+                            <option value="western">🌐 Quốc tế / Âu Mỹ (Western) • Mắt sâu, sống mũi cao phương Tây</option>
+                            <option value="anime">🎨 Hoạt họa Anime / Manhwa • Phong cách vẽ 2D visual novel</option>
+                        </select>
+                    </div>
+
+                    <!-- Multi-Zone Upload Slots (Google Flow UploadZone) -->
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                                <i data-lucide="scan-face" class="w-3.5 h-3.5 text-banana-400"></i>
+                                Phân vùng Media Tham chiếu (Multi-Zone)
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-mono">Dán Ctrl+V hoặc chọn ảnh</span>
+                        </div>
+
+                        <!-- Zone 1: Model Nam Slots -->
+                        <div id="zoneMaleContainer" class="p-3 bg-slate-950/80 rounded-xl ring-1 ring-slate-800/80 space-y-2">
+                            <div class="text-[11px] font-semibold text-sky-400 flex items-center gap-1">
+                                <i data-lucide="user" class="w-3.5 h-3.5"></i>
+                                Tham chiếu Model Nam (Male Model Slots)
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <!-- Male Face -->
+                                <div class="it-slot group relative bg-slate-900/60 hover:bg-slate-900 rounded-lg p-2 text-center border border-dashed border-slate-800 hover:border-sky-500/50 transition cursor-pointer min-h-[125px] flex flex-col items-center justify-between" data-slot="maleFace">
+                                    <input type="file" accept="image/*" class="it-file-input absolute inset-0 opacity-0 cursor-pointer z-10" data-slot="maleFace">
+                                    <div class="it-slot-empty flex flex-col items-center gap-1 my-auto">
+                                        <div class="w-7 h-7 rounded-full bg-slate-800 group-hover:bg-sky-500/20 text-slate-400 group-hover:text-sky-400 flex items-center justify-center transition">
+                                            <i data-lucide="smile" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="text-[10px] font-medium text-slate-300 leading-tight">Khuôn mặt</span>
+                                        <span class="text-[9px] text-slate-500 font-mono">Khóa mặt</span>
+                                    </div>
+                                    <div class="it-slot-filled hidden w-full h-full flex flex-col items-center relative z-20">
+                                        <img src="" class="it-slot-preview w-full h-14 object-cover rounded ring-1 ring-sky-500/30">
+                                        <span class="text-[9px] text-sky-400 font-medium truncate w-full mt-1">Mặt Nam</span>
+                                        <button type="button" class="it-slot-remove absolute -top-1 -right-1 w-5 h-5 bg-rose-600 hover:bg-rose-500 text-white rounded-full flex items-center justify-center shadow" data-slot="maleFace">
+                                            <i data-lucide="x" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                    <input type="text" id="desc-maleFace" placeholder="VD: Trai trẻ châu Á tóc đen" class="w-full mt-1 bg-slate-950 text-slate-200 text-[10px] px-1.5 py-0.5 rounded ring-1 ring-slate-800 focus:ring-1 focus:ring-sky-500 focus:outline-none z-20" title="Chi tiết khuôn mặt">
+                                </div>
+
+                                <!-- Male Outfit -->
+                                <div class="it-slot group relative bg-slate-900/60 hover:bg-slate-900 rounded-lg p-2 text-center border border-dashed border-slate-800 hover:border-sky-500/50 transition cursor-pointer min-h-[125px] flex flex-col items-center justify-between" data-slot="maleOutfit">
+                                    <input type="file" accept="image/*" class="it-file-input absolute inset-0 opacity-0 cursor-pointer z-10" data-slot="maleOutfit">
+                                    <div class="it-slot-empty flex flex-col items-center gap-1 my-auto">
+                                        <div class="w-7 h-7 rounded-full bg-slate-800 group-hover:bg-sky-500/20 text-slate-400 group-hover:text-sky-400 flex items-center justify-center transition">
+                                            <i data-lucide="shirt" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="text-[10px] font-medium text-slate-300 leading-tight">Trang phục</span>
+                                        <span class="text-[9px] text-slate-500 font-mono">Khóa áo quần</span>
+                                    </div>
+                                    <div class="it-slot-filled hidden w-full h-full flex flex-col items-center relative z-20">
+                                        <img src="" class="it-slot-preview w-full h-14 object-cover rounded ring-1 ring-sky-500/30">
+                                        <span class="text-[9px] text-sky-400 font-medium truncate w-full mt-1">Đồ Nam</span>
+                                        <button type="button" class="it-slot-remove absolute -top-1 -right-1 w-5 h-5 bg-rose-600 hover:bg-rose-500 text-white rounded-full flex items-center justify-center shadow" data-slot="maleOutfit">
+                                            <i data-lucide="x" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                    <input type="text" id="desc-maleOutfit" placeholder="VD: Áo trắng họa tiết hồng" class="w-full mt-1 bg-slate-950 text-slate-200 text-[10px] px-1.5 py-0.5 rounded ring-1 ring-slate-800 focus:ring-1 focus:ring-sky-500 focus:outline-none z-20" title="Chi tiết trang phục">
+                                </div>
+
+                                <!-- Male Accessories -->
+                                <div class="it-slot group relative bg-slate-900/60 hover:bg-slate-900 rounded-lg p-2 text-center border border-dashed border-slate-800 hover:border-sky-500/50 transition cursor-pointer min-h-[125px] flex flex-col items-center justify-between" data-slot="maleAccessories">
+                                    <input type="file" accept="image/*" class="it-file-input absolute inset-0 opacity-0 cursor-pointer z-10" data-slot="maleAccessories">
+                                    <div class="it-slot-empty flex flex-col items-center gap-1 my-auto">
+                                        <div class="w-7 h-7 rounded-full bg-slate-800 group-hover:bg-sky-500/20 text-slate-400 group-hover:text-sky-400 flex items-center justify-center transition">
+                                            <i data-lucide="watch" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="text-[10px] font-medium text-slate-300 leading-tight">Phụ kiện</span>
+                                        <span class="text-[9px] text-slate-500 font-mono">Đồng hồ/kính</span>
+                                    </div>
+                                    <div class="it-slot-filled hidden w-full h-full flex flex-col items-center relative z-20">
+                                        <img src="" class="it-slot-preview w-full h-14 object-cover rounded ring-1 ring-sky-500/30">
+                                        <span class="text-[9px] text-sky-400 font-medium truncate w-full mt-1">Phụ kiện</span>
+                                        <button type="button" class="it-slot-remove absolute -top-1 -right-1 w-5 h-5 bg-rose-600 hover:bg-rose-500 text-white rounded-full flex items-center justify-center shadow" data-slot="maleAccessories">
+                                            <i data-lucide="x" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                    <input type="text" id="desc-maleAccessories" placeholder="VD: Kính râm / đồng hồ" class="w-full mt-1 bg-slate-950 text-slate-200 text-[10px] px-1.5 py-0.5 rounded ring-1 ring-slate-800 focus:ring-1 focus:ring-sky-500 focus:outline-none z-20" title="Chi tiết phụ kiện">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Zone 2: Model Nữ Slots -->
+                        <div id="zoneFemaleContainer" class="p-3 bg-slate-950/80 rounded-xl ring-1 ring-slate-800/80 space-y-2">
+                            <div class="text-[11px] font-semibold text-rose-400 flex items-center gap-1">
+                                <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                                Tham chiếu Model Nữ (Female Model Slots)
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                                <!-- Female Face -->
+                                <div class="it-slot group relative bg-slate-900/60 hover:bg-slate-900 rounded-lg p-2 text-center border border-dashed border-slate-800 hover:border-rose-500/50 transition cursor-pointer min-h-[125px] flex flex-col items-center justify-between" data-slot="femaleFace">
+                                    <input type="file" accept="image/*" class="it-file-input absolute inset-0 opacity-0 cursor-pointer z-10" data-slot="femaleFace">
+                                    <div class="it-slot-empty flex flex-col items-center gap-1 my-auto">
+                                        <div class="w-7 h-7 rounded-full bg-slate-800 group-hover:bg-rose-500/20 text-slate-400 group-hover:text-rose-400 flex items-center justify-center transition">
+                                            <i data-lucide="sparkles" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="text-[10px] font-medium text-slate-300 leading-tight">Khuôn mặt</span>
+                                        <span class="text-[9px] text-slate-500 font-mono">Khóa mặt</span>
+                                    </div>
+                                    <div class="it-slot-filled hidden w-full h-full flex flex-col items-center relative z-20">
+                                        <img src="" class="it-slot-preview w-full h-14 object-cover rounded ring-1 ring-rose-500/30">
+                                        <span class="text-[9px] text-rose-400 font-medium truncate w-full mt-1">Mặt Nữ</span>
+                                        <button type="button" class="it-slot-remove absolute -top-1 -right-1 w-5 h-5 bg-rose-600 hover:bg-rose-500 text-white rounded-full flex items-center justify-center shadow" data-slot="femaleFace">
+                                            <i data-lucide="x" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                    <input type="text" id="desc-femaleFace" placeholder="VD: Gái trẻ châu Á tóc đen" class="w-full mt-1 bg-slate-950 text-slate-200 text-[10px] px-1.5 py-0.5 rounded ring-1 ring-slate-800 focus:ring-1 focus:ring-rose-500 focus:outline-none z-20" title="Chi tiết khuôn mặt">
+                                </div>
+
+                                <!-- Female Outfit -->
+                                <div class="it-slot group relative bg-slate-900/60 hover:bg-slate-900 rounded-lg p-2 text-center border border-dashed border-slate-800 hover:border-rose-500/50 transition cursor-pointer min-h-[125px] flex flex-col items-center justify-between" data-slot="femaleOutfit">
+                                    <input type="file" accept="image/*" class="it-file-input absolute inset-0 opacity-0 cursor-pointer z-10" data-slot="femaleOutfit">
+                                    <div class="it-slot-empty flex flex-col items-center gap-1 my-auto">
+                                        <div class="w-7 h-7 rounded-full bg-slate-800 group-hover:bg-rose-500/20 text-slate-400 group-hover:text-rose-400 flex items-center justify-center transition">
+                                            <i data-lucide="gem" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="text-[10px] font-medium text-slate-300 leading-tight">Trang phục</span>
+                                        <span class="text-[9px] text-slate-500 font-mono">Khóa váy/áo</span>
+                                    </div>
+                                    <div class="it-slot-filled hidden w-full h-full flex flex-col items-center relative z-20">
+                                        <img src="" class="it-slot-preview w-full h-14 object-cover rounded ring-1 ring-rose-500/30">
+                                        <span class="text-[9px] text-rose-400 font-medium truncate w-full mt-1">Đồ Nữ</span>
+                                        <button type="button" class="it-slot-remove absolute -top-1 -right-1 w-5 h-5 bg-rose-600 hover:bg-rose-500 text-white rounded-full flex items-center justify-center shadow" data-slot="femaleOutfit">
+                                            <i data-lucide="x" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                    <input type="text" id="desc-femaleOutfit" placeholder="VD: Váy dạ hội xanh đen" class="w-full mt-1 bg-slate-950 text-slate-200 text-[10px] px-1.5 py-0.5 rounded ring-1 ring-slate-800 focus:ring-1 focus:ring-rose-500 focus:outline-none z-20" title="Chi tiết trang phục">
+                                </div>
+
+                                <!-- Female Accessories -->
+                                <div class="it-slot group relative bg-slate-900/60 hover:bg-slate-900 rounded-lg p-2 text-center border border-dashed border-slate-800 hover:border-rose-500/50 transition cursor-pointer min-h-[125px] flex flex-col items-center justify-between" data-slot="femaleAccessories">
+                                    <input type="file" accept="image/*" class="it-file-input absolute inset-0 opacity-0 cursor-pointer z-10" data-slot="femaleAccessories">
+                                    <div class="it-slot-empty flex flex-col items-center gap-1 my-auto">
+                                        <div class="w-7 h-7 rounded-full bg-slate-800 group-hover:bg-rose-500/20 text-slate-400 group-hover:text-rose-400 flex items-center justify-center transition">
+                                            <i data-lucide="heart" class="w-4 h-4"></i>
+                                        </div>
+                                        <span class="text-[10px] font-medium text-slate-300 leading-tight">Phụ kiện</span>
+                                        <span class="text-[9px] text-slate-500 font-mono">Trang sức/túi</span>
+                                    </div>
+                                    <div class="it-slot-filled hidden w-full h-full flex flex-col items-center relative z-20">
+                                        <img src="" class="it-slot-preview w-full h-14 object-cover rounded ring-1 ring-rose-500/30">
+                                        <span class="text-[9px] text-rose-400 font-medium truncate w-full mt-1">Phụ kiện Nữ</span>
+                                        <button type="button" class="it-slot-remove absolute -top-1 -right-1 w-5 h-5 bg-rose-600 hover:bg-rose-500 text-white rounded-full flex items-center justify-center shadow" data-slot="femaleAccessories">
+                                            <i data-lucide="x" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                    <input type="text" id="desc-femaleAccessories" placeholder="VD: Khuyên tai / vòng cổ" class="w-full mt-1 bg-slate-950 text-slate-200 text-[10px] px-1.5 py-0.5 rounded ring-1 ring-slate-800 focus:ring-1 focus:ring-rose-500 focus:outline-none z-20" title="Chi tiết phụ kiện">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Zone 3: Bối cảnh Slots -->
+                        <div class="p-3 bg-slate-950/80 rounded-xl ring-1 ring-slate-800/80 space-y-2">
+                            <div class="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
+                                <i data-lucide="mountain-snow" class="w-3.5 h-3.5"></i>
+                                Bối cảnh &amp; Không gian (Background Slot)
+                            </div>
+                            <div class="it-slot group relative bg-slate-900/60 hover:bg-slate-900 rounded-lg p-2 text-center border border-dashed border-slate-800 hover:border-emerald-500/50 transition cursor-pointer min-h-[85px] flex flex-col items-center justify-center" data-slot="background">
+                                <input type="file" accept="image/*" class="it-file-input absolute inset-0 opacity-0 cursor-pointer z-10" data-slot="background">
+                                <div class="it-slot-empty flex items-center justify-center gap-3 py-1">
+                                    <div class="w-7 h-7 rounded-full bg-slate-800 group-hover:bg-emerald-500/20 text-slate-400 group-hover:text-emerald-400 flex items-center justify-center transition">
+                                        <i data-lucide="image" class="w-4 h-4"></i>
+                                    </div>
+                                    <div class="text-left">
+                                        <p class="text-xs font-medium text-slate-300">Tải ảnh không gian / địa điểm tham chiếu</p>
+                                        <p class="text-[10px] text-slate-500 font-mono">Đồng nhất ánh sáng, bối cảnh, phông nền</p>
+                                    </div>
+                                </div>
+                                <div class="it-slot-filled hidden w-full h-full flex items-center gap-3 relative z-20 text-left">
+                                    <img src="" class="it-slot-preview w-16 h-12 object-cover rounded ring-1 ring-emerald-500/30">
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-xs font-semibold text-emerald-400 truncate">Ảnh Bối cảnh</p>
+                                        <p class="text-[10px] text-slate-400">Đã kích hoạt Background Anchor</p>
+                                    </div>
+                                    <button type="button" class="it-slot-remove p-1 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800" data-slot="background">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prompt Anchoring & Identity Lock Controls -->
+                    <div class="space-y-3 pt-2 border-t border-slate-800/80">
+                        <!-- Shot Type -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Góc chụp (Shot Type)</label>
+                            <select id="itShotTypeSelect" class="w-full bg-slate-950 text-slate-200 rounded-lg px-3 py-2 text-xs font-medium ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none min-h-[40px]">
+                                <option value="medium shot, waist up, capturing upper body, natural posture and facial emotion" selected>Bán thân (Medium Shot - Khuyên dùng)</option>
+                                <option value="close-up portrait, focusing on sharp facial features, authentic eye contact, crisp skin texture">Cận cảnh chân dung (Close-up Portrait)</option>
+                                <option value="full-body shot, showing complete outfit styling, dynamic posing and footwear">Toàn thân thời trang (Full-body Fashion)</option>
+                                <option value="cinematic wide angle shot, cinematic depth of field, subjects seamlessly blended in vast environment">Điện ảnh góc rộng (Cinematic Wide Angle)</option>
+                            </select>
+                        </div>
+
+                        <!-- Aesthetic Style -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Phong cách nghệ thuật (Aesthetics)</label>
+                            <select id="itStyleSelect" class="w-full bg-slate-950 text-slate-200 rounded-lg px-3 py-2 text-xs font-medium ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none min-h-[40px]">
+                                <option value="8k photorealistic commercial studio photography, Hasselblad medium format, ultra-fine texture, soft directional studio lighting, sharp focus" selected>📸 Studio Commercial 8K (Chụp ảnh thương mại sắc nét)</option>
+                                <option value="romantic Vietnamese heritage aesthetic, gentle Hanoi golden sunlight, vintage poetic atmosphere, natural elegance, Kodak Portra tones">🏮 Áo dài / Cổ trang Việt Nam (Vietnamese Heritage)</option>
+                                <option value="dreamy Korean romantic drama aesthetic, soft golden hour glow, romantic mood, cinematic pastel grade, crisp highlights">🌸 Hàn Quốc thanh xuân (K-Drama Romantic)</option>
+                                <option value="high-fashion editorial magazine cover photography, dramatic high contrast, Vogue style, elegant pose, luxury lighting">💎 High-Fashion Editorial (Tạp chí thời trang cao cấp)</option>
+                                <option value="masterpiece modern anime visual novel style, Makoto Shinkai aesthetic, glowing ambient particles, vibrant emotional lighting">🎨 Hoạt họa Anime Masterpiece (Makoto Shinkai)</option>
+                            </select>
+                        </div>
+
+                        <!-- Action / Extra Context Prompt -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1">
+                                Hành động &amp; Bối cảnh bổ sung (Tùy chọn)
+                            </label>
+                            <textarea id="itActionPrompt" rows="2" placeholder="VD: Nắm tay nhau cùng cười rạng rỡ, tà áo bay nhẹ trong gió thu, ánh hoàng hôn phản chiếu ấm áp..." class="w-full bg-slate-950 text-slate-100 placeholder-slate-500 rounded-xl p-3 text-xs ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none transition resize-none"></textarea>
+                        </div>
+
+                        <!-- Identity Lock Rules Checklist -->
+                        <div class="p-2.5 bg-slate-950 rounded-xl ring-1 ring-slate-800/80 space-y-1.5 text-[11px] text-slate-400">
+                            <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-slate-100">
+                                <input type="checkbox" id="chkIdentityLock" checked class="rounded border-slate-700 text-banana-500 focus:ring-banana-500">
+                                <span>Khóa cấu trúc khuôn mặt &amp; ánh mắt (STRICT IDENTITY LOCK)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-slate-100">
+                                <input type="checkbox" id="chkClothingLock" checked class="rounded border-slate-700 text-banana-500 focus:ring-banana-500">
+                                <span>Đồng nhất hoa văn, phom dáng trang phục (CLOTHING FIDELITY)</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-slate-100">
+                                <input type="checkbox" id="chkBgHarmony" checked class="rounded border-slate-700 text-banana-500 focus:ring-banana-500">
+                                <span>Tự động cân chỉnh hòa sắc ánh sáng &amp; bóng đổ (LIGHTING INTEGRATION)</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings: Aspect Ratio & Resolution & Quantity -->
+                <div class="space-y-4 pt-2 border-t border-slate-800/80">
+                    <!-- Aspect Ratio Grid -->
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Tỷ lệ khung hình (Aspect Ratio)</label>
+                        <div class="grid grid-cols-3 sm:grid-cols-6 gap-2" id="aspectRatioGroup">
+                            <button type="button" data-ratio="1:1" data-w="1024" data-h="1024" class="ratio-btn active flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-banana-500/10 text-banana-400 ring-1 ring-banana-500/40 min-h-[50px] transition">
+                                <span class="text-xs font-bold font-mono">1:1</span>
+                                <span class="text-[10px] text-slate-400 mt-0.5">Vuông</span>
+                            </button>
+                            <button type="button" data-ratio="16:9" data-w="1344" data-h="768" class="ratio-btn flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-950 text-slate-300 ring-1 ring-slate-800 hover:bg-slate-800/40 min-h-[50px] transition">
+                                <span class="text-xs font-bold font-mono">16:9</span>
+                                <span class="text-[10px] text-slate-500 mt-0.5">Ngang PC</span>
+                            </button>
+                            <button type="button" data-ratio="9:16" data-w="768" data-h="1344" class="ratio-btn flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-950 text-slate-300 ring-1 ring-slate-800 hover:bg-slate-800/40 min-h-[50px] transition">
+                                <span class="text-xs font-bold font-mono">9:16</span>
+                                <span class="text-[10px] text-slate-500 mt-0.5">Dọc Story</span>
+                            </button>
+                            <button type="button" data-ratio="4:3" data-w="1152" data-h="864" class="ratio-btn flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-950 text-slate-300 ring-1 ring-slate-800 hover:bg-slate-800/40 min-h-[50px] transition">
+                                <span class="text-xs font-bold font-mono">4:3</span>
+                                <span class="text-[10px] text-slate-500 mt-0.5">Chuẩn</span>
+                            </button>
+                            <button type="button" data-ratio="3:4" data-w="864" data-h="1152" class="ratio-btn flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-950 text-slate-300 ring-1 ring-slate-800 hover:bg-slate-800/40 min-h-[50px] transition">
+                                <span class="text-xs font-bold font-mono">3:4</span>
+                                <span class="text-[10px] text-slate-500 mt-0.5">Chân dung</span>
+                            </button>
+                            <button type="button" data-ratio="21:9" data-w="1536" data-h="640" class="ratio-btn flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-slate-950 text-slate-300 ring-1 ring-slate-800 hover:bg-slate-800/40 min-h-[50px] transition">
+                                <span class="text-xs font-bold font-mono">21:9</span>
+                                <span class="text-[10px] text-slate-500 mt-0.5">Điện ảnh</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Resolution & Output Count in 2 columns -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Resolution Selector -->
+                        <div>
+                            <label for="resolutionSelect" class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Độ phân giải (Resolution)</label>
+                            <select id="resolutionSelect" class="w-full bg-slate-950 text-slate-200 rounded-xl px-3 py-2 text-xs font-medium ring-1 ring-slate-800 focus:ring-2 focus:ring-banana-500 focus:outline-none min-h-[44px]">
+                                <option value="standard">Chuẩn (Standard ~768px - Nhanh nhất)</option>
+                                <option value="hd" selected>Cao (HD ~1024px - Khuyên dùng)</option>
+                                <option value="2k">Siêu nét (2K ~1536px)</option>
+                                <option value="4k">Cực đại (4K ~2048px)</option>
+                            </select>
+                        </div>
+
+                        <!-- Output Quantity (1 to 4) -->
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Số lượng ảnh (Output Count)</label>
+                            <div class="grid grid-cols-4 gap-1.5" id="outputCountGroup">
+                                <button type="button" data-count="1" class="count-btn active py-2 rounded-xl text-xs font-bold font-mono bg-banana-500/10 text-banana-400 ring-1 ring-banana-500/40 min-h-[44px] transition">1</button>
+                                <button type="button" data-count="2" class="count-btn py-2 rounded-xl text-xs font-bold font-mono bg-slate-950 text-slate-400 ring-1 ring-slate-800 hover:bg-slate-800 min-h-[44px] transition">2</button>
+                                <button type="button" data-count="3" class="count-btn py-2 rounded-xl text-xs font-bold font-mono bg-slate-950 text-slate-400 ring-1 ring-slate-800 hover:bg-slate-800 min-h-[44px] transition">3</button>
+                                <button type="button" data-count="4" class="count-btn py-2 rounded-xl text-xs font-bold font-mono bg-slate-950 text-slate-400 ring-1 ring-slate-800 hover:bg-slate-800 min-h-[44px] transition">4</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advance Seed & Negative Prompt Accordion -->
+                    <details class="group text-xs">
+                        <summary class="cursor-pointer text-slate-400 hover:text-slate-200 font-medium py-1 list-none flex items-center justify-between">
+                            <span>Tùy chỉnh nâng cao (Seed, Negative Prompt)</span>
+                            <i data-lucide="chevron-down" class="w-4 h-4 transition group-open:rotate-180"></i>
+                        </summary>
+                        <div class="pt-3 space-y-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Seed (Mã hạt ngẫu nhiên):</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="number" id="seedInput" placeholder="Để trống để ngẫu nhiên" class="w-full bg-slate-950 text-slate-200 rounded-lg px-3 py-1.5 text-xs ring-1 ring-slate-800 font-mono">
+                                    <button type="button" id="btnRandomSeed" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium ring-1 ring-slate-700">🎲 Đổi</button>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-400 mb-1">Negative Prompt (Chi tiết không muốn xuất hiện):</label>
+                                <input type="text" id="negativePromptInput" placeholder="blurry, low quality, distorted, extra limbs, bad anatomy" class="w-full bg-slate-950 text-slate-200 rounded-lg px-3 py-1.5 text-xs ring-1 ring-slate-800">
+                            </div>
+                        </div>
+                    </details>
+                </div>
+
+                <!-- Primary CTA Button -->
+                <button type="button" id="btnGenerate" class="w-full py-3.5 px-6 rounded-xl font-semibold text-slate-950 bg-gradient-to-r from-banana-400 via-banana-300 to-amber-400 hover:from-banana-300 hover:to-amber-300 shadow-lg shadow-banana-500/25 ring-1 ring-banana-300 active:scale-[0.99] transition flex items-center justify-center gap-2 text-sm min-h-[48px]">
+                    <i data-lucide="wand-2" class="w-5 h-5 text-slate-950"></i>
+                    <span id="btnGenerateText">Tạo Ảnh Ngay (Generate)</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Right Column: Canvas / Gallery / Output Viewer (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col gap-4">
+            
+            <!-- Output Header Bar -->
+            <div class="flex items-center justify-between bg-slate-900/80 px-4 py-3 rounded-2xl ring-1 ring-slate-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="image" class="w-4 h-4 text-banana-400"></i>
+                    <h2 class="text-sm font-semibold text-slate-200">Kết quả tạo ảnh</h2>
+                    <span id="resultCountBadge" class="hidden px-2 py-0.5 text-[10px] font-mono bg-slate-800 text-slate-300 rounded-full ring-1 ring-slate-700">0 ảnh</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btnDownloadAll" class="hidden items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-xl ring-1 ring-slate-700 transition min-h-[36px]">
+                        <i data-lucide="download-cloud" class="w-3.5 h-3.5"></i>
+                        Tải tất cả
+                    </button>
+                </div>
+            </div>
+
+            <!-- Optimized Prompt Banner -->
+            <div id="optimizedPromptBanner" class="hidden p-3 bg-slate-900/90 rounded-2xl ring-1 ring-banana-500/30 text-xs flex items-start gap-2.5 shadow-md">
+                <i data-lucide="sparkles" class="w-4 h-4 text-banana-400 mt-0.5 flex-shrink-0"></i>
+                <div class="flex-1 min-w-0">
+                    <span class="font-semibold text-banana-400 text-xs flex items-center gap-1.5">
+                        Prompt AI đã tối ưu 100%:
+                    </span>
+                    <p id="optimizedPromptText" class="text-slate-300 font-mono text-[11px] mt-1 break-words leading-relaxed"></p>
+                </div>
+            </div>
+
+            <!-- Empty State Display -->
+            <div id="emptyState" class="flex flex-col items-center justify-center p-12 bg-slate-900/40 rounded-2xl border border-dashed border-slate-800/80 text-center min-h-[420px]">
+                <div class="w-16 h-16 rounded-2xl bg-slate-800/60 ring-1 ring-slate-700/60 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                    <i data-lucide="sparkles" class="w-8 h-8 text-banana-400/80"></i>
+                </div>
+                <h3 class="text-base font-semibold text-slate-200">Chưa có ảnh nào được tạo</h3>
+                <p class="text-xs text-slate-400 max-w-sm mt-1.5 leading-relaxed">
+                    Nhập ý tưởng của bạn ở bảng bên trái hoặc bấm nút bên dưới để thử một prompt gợi ý cực chất với Nano Banana Pro.
+                </p>
+                <button type="button" id="btnTrySample" class="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 ring-1 ring-slate-700 hover:ring-slate-600 transition min-h-[44px]">
+                    <i data-lucide="zap" class="w-4 h-4 text-banana-400"></i>
+                    Thử tạo ảnh mẫu ngay
+                </button>
+            </div>
+
+            <!-- Loading Skeleton Grid -->
+            <div id="loadingState" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Skeletons populated via JS -->
+            </div>
+
+            <!-- Image Results Grid -->
+            <div id="resultsGrid" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Dynamic cards inserted via JS -->
+            </div>
+
+            <!-- Status Banner / Toast -->
+            <div id="statusToast" class="hidden fixed bottom-6 right-6 z-50 max-w-md bg-slate-900 text-slate-200 p-4 rounded-xl ring-1 ring-slate-700 shadow-2xl flex items-start gap-3 transition-all duration-300">
+                <div id="statusToastIcon" class="mt-0.5"></div>
+                <div class="flex-1 text-xs">
+                    <p id="statusToastTitle" class="font-semibold text-slate-100"></p>
+                    <p id="statusToastMsg" class="text-slate-400 mt-0.5"></p>
+                </div>
+                <button type="button" id="btnCloseToast" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Modal Lightbox (Full View) -->
+    <div id="lightboxModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center">
+            <button id="btnCloseLightbox" class="absolute -top-12 right-0 p-2 text-slate-400 hover:text-slate-100 min-w-[44px] min-h-[44px] flex items-center justify-center" title="Đóng">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            <img id="lightboxImage" src="" alt="Full view" class="max-w-full max-h-[80vh] object-contain rounded-xl ring-1 ring-slate-800 shadow-2xl">
+            <div class="mt-4 flex items-center gap-3">
+                <a id="lightboxDownloadBtn" href="#" download="nano-banana-pro.png" class="px-4 py-2 bg-banana-400 hover:bg-banana-300 text-slate-950 rounded-xl text-xs font-semibold ring-1 ring-banana-300 flex items-center gap-2 min-h-[44px]">
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    Tải ảnh gốc về máy
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Drawer / Modal -->
+    <div id="historyModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
+        <div class="w-full max-w-md bg-slate-900 h-full p-6 ring-1 ring-slate-800 shadow-2xl flex flex-col">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="history" class="w-5 h-5 text-banana-400"></i>
+                    <h3 class="text-sm font-bold text-slate-100">Lịch sử tạo ảnh</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btnClearHistory" class="text-xs text-rose-400 hover:underline px-2 py-1">Xóa hết</button>
+                    <button id="btnCloseHistory" class="p-1.5 text-slate-400 hover:text-slate-200">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="historyList" class="flex-1 overflow-y-auto py-4 space-y-3">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Main JS Application Logic -->
+    <script src="app.js?v=3.2"></script>
+    <script>
+        // Init Lucide icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>
